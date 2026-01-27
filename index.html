@@ -1,31 +1,41 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ChiDate | Chicago Date Generator</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChiDate | Chicago Date Generator</title>
 
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
 
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
 
-  <style>
-    body { font-family: 'Inter', sans-serif; }
-  </style>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-fade-in {
+            animation: fade-in 0.25s ease-out;
+        }
+    </style>
 </head>
 
 <body class="bg-[#F4F4F9]">
-  <div id="root"></div>
+<div id="root"></div>
 
-  <script type="text/babel">
-    const { useState } = React;
+<script type="text/babel">
+const { useState } = React;
 
-    const TRANSLATIONS = {
-      en: {
-        'app-title': 'ChiDate',
+/* ---------- TRANSLATIONS ---------- */
+
+const TRANSLATIONS = {
+    en: {
         'subtitle': 'The Ultimate Chicago Date Idea Generator',
         'label-date-type': 'Type of Date',
         'type-adventurous': 'Adventurous',
@@ -40,20 +50,14 @@
         'atmosphere-intimate': 'Intimate',
         'atmosphere-social': 'Social',
         'atmosphere-romantic': 'Romantic',
-        'label-price': 'Price Range',
-        'price-budget': 'Budget-Friendly',
-        'price-mid': 'Mid-Range',
-        'price-upscale': 'Upscale',
         'button-text-default': 'Generate Date Idea',
-        'button-text-loading': 'Asking the local experts...',
+        'button-text-loading': 'Asking local experts...',
         'result-hours': 'Hours',
         'result-best-time': 'Best Time',
-        'result-occupancy': 'Crowd Level',
         'map-link-text': 'View on Google Maps',
-        'error-desc': 'The connection to the AI failed. Please try again.',
-      },
-      es: {
-        'app-title': 'ChiDate',
+        'error-desc': 'The connection to the AI failed. Please try again.'
+    },
+    es: {
         'subtitle': 'El Mejor Generador de Citas en Chicago',
         'label-date-type': 'Tipo de Cita',
         'type-adventurous': 'Aventurera',
@@ -68,224 +72,228 @@
         'atmosphere-intimate': 'Íntimo',
         'atmosphere-social': 'Social',
         'atmosphere-romantic': 'Romántico',
-        'label-price': 'Rango de Precio',
-        'price-budget': 'Económico',
-        'price-mid': 'Medio',
-        'price-upscale': 'Premium',
         'button-text-default': 'Generar Idea de Cita',
         'button-text-loading': 'Consultando expertos locales...',
         'result-hours': 'Horario',
         'result-best-time': 'Mejor Momento',
-        'result-occupancy': 'Nivel de Gente',
         'map-link-text': 'Ver en Google Maps',
-        'error-desc': 'La conexión con la IA falló. Intenta nuevamente.',
-      }
-    };
+        'error-desc': 'La conexión con la IA falló. Inténtalo de nuevo.'
+    }
+};
 
-    function App() {
-      const [lang, setLang] = useState('en');
-      const [loading, setLoading] = useState(false);
-      const [result, setResult] = useState(null);
-      const [error, setError] = useState(null);
+/* ---------- LOADING SKELETON ---------- */
 
-      const [dateType, setDateType] = useState('foodie');
-      const [timeOfDay, setTimeOfDay] = useState('evening');
-      const [atmosphere, setAtmosphere] = useState('romantic');
-      const [price, setPrice] = useState('mid');
+const LoadingSkeleton = () => (
+    <div className="bg-white rounded-3xl shadow-xl p-6 border border-gray-100 animate-pulse">
+        <div className="h-4 w-24 bg-gray-200 rounded mb-4 mx-auto"></div>
+        <div className="h-6 w-2/3 bg-gray-200 rounded mb-6 mx-auto"></div>
 
-      const t = (key) => TRANSLATIONS[lang][key] || key;
+        <div className="space-y-3">
+            <div className="h-3 bg-gray-200 rounded w-full"></div>
+            <div className="h-3 bg-gray-200 rounded w-5/6"></div>
+            <div className="h-3 bg-gray-200 rounded w-4/6"></div>
+        </div>
 
-      const generateDate = async () => {
+        <div className="grid grid-cols-2 gap-4 mt-6">
+            <div className="h-16 bg-gray-200 rounded-xl"></div>
+            <div className="h-16 bg-gray-200 rounded-xl"></div>
+        </div>
+
+        <div className="h-12 bg-gray-200 rounded-2xl mt-6"></div>
+    </div>
+);
+
+/* ---------- APP ---------- */
+
+function App() {
+    const [lang, setLang] = useState('en');
+    const [loading, setLoading] = useState(false);
+    const [result, setResult] = useState(null);
+    const [error, setError] = useState(null);
+
+    const [dateType, setDateType] = useState('foodie');
+    const [timeOfDay, setTimeOfDay] = useState('evening');
+    const [atmosphere, setAtmosphere] = useState('romantic');
+
+    const t = (key) => TRANSLATIONS[lang][key] || key;
+
+    const generateDate = async () => {
         setLoading(true);
         setError(null);
         setResult(null);
 
         try {
-          const response = await fetch("/.netlify/functions/generateDate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              dateType,
-              timeOfDay,
-              atmosphere,
-              price,
-              lang
-            })
-          });
+            const response = await fetch("/.netlify/functions/generateDate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    dateType,
+                    timeOfDay,
+                    atmosphere,
+                    price: "mid",
+                    lang
+                })
+            });
 
-          if (!response.ok) {
-            throw new Error("Function request failed");
-          }
+            if (!response.ok) throw new Error();
 
-          const data = await response.json();
-          setResult(data);
-        } catch (err) {
-          console.error(err);
-          setError(t('error-desc'));
+            const data = await response.json();
+            setResult(data);
+        } catch {
+            setError(t('error-desc'));
         } finally {
-          setLoading(false);
+            setLoading(false);
         }
-      };
+    };
 
-      const OptionButton = ({ label, active, onClick }) => (
+    const OptionButton = ({ label, active, onClick }) => (
         <button
-          onClick={onClick}
-          className={`p-3 rounded-xl border-2 transition-all text-sm font-medium ${
-            active
-              ? 'bg-[#B3282D] border-[#B3282D] text-white shadow-md'
-              : 'bg-white border-gray-100 text-gray-600 hover:border-red-200'
-          }`}
+            onClick={onClick}
+            className={`p-3 rounded-xl border-2 text-sm font-medium transition-all
+                ${active
+                    ? 'bg-[#B3282D] border-[#B3282D] text-white shadow-md'
+                    : 'bg-white border-gray-100 text-gray-600 hover:border-red-200'
+                }`}
         >
-          {label}
+            {label}
         </button>
-      );
+    );
 
-      return (
+    return (
         <div className="min-h-screen p-4 md:p-8">
-          <div className="max-w-xl mx-auto">
+            <div className="max-w-xl mx-auto">
 
-            <header className="text-center mb-8 relative">
-              <h1 className="text-4xl font-black text-[#B3282D] tracking-tight">
-                ChiDate
-              </h1>
-              <p className="text-gray-500 text-sm font-medium mt-1">
-                {t('subtitle')}
-              </p>
+                <header className="text-center mb-8 relative">
+                    <h1 className="text-4xl font-black text-[#B3282D]">ChiDate</h1>
+                    <p className="text-gray-500 text-sm font-medium mt-1">{t('subtitle')}</p>
 
-              <button
-                onClick={() => setLang(lang === 'en' ? 'es' : 'en')}
-                className="absolute right-0 top-0 bg-white px-3 py-1 rounded-full shadow-sm text-xs font-bold border border-gray-100"
-              >
-                {lang.toUpperCase()}
-              </button>
-            </header>
+                    <button
+                        onClick={() => setLang(lang === 'en' ? 'es' : 'en')}
+                        className="absolute right-0 top-0 bg-white px-3 py-1 rounded-full shadow-sm text-xs font-bold border border-gray-100"
+                    >
+                        {lang.toUpperCase()}
+                    </button>
+                </header>
 
-            <div className="bg-white rounded-3xl shadow-xl p-6 mb-8">
-              <div className="space-y-6">
+                <div className="bg-white rounded-3xl shadow-xl p-6 mb-8 border border-white space-y-6">
 
-                <section>
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3 block">
-                    {t('label-date-type')}
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {['adventurous', 'relaxing', 'cultural', 'foodie'].map(type => (
-                      <OptionButton
-                        key={type}
-                        label={t(`type-${type}`)}
-                        active={dateType === type}
-                        onClick={() => setDateType(type)}
-                      />
-                    ))}
-                  </div>
-                </section>
+                    <section>
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3 block">
+                            {t('label-date-type')}
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                            {['adventurous','relaxing','cultural','foodie'].map(type => (
+                                <OptionButton
+                                    key={type}
+                                    label={t(`type-${type}`)}
+                                    active={dateType === type}
+                                    onClick={() => setDateType(type)}
+                                />
+                            ))}
+                        </div>
+                    </section>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <section>
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3 block">
-                      {t('label-time-of-day')}
-                    </label>
-                    <div className="flex flex-col gap-2">
-                      {['morning', 'afternoon', 'evening'].map(time => (
-                        <OptionButton
-                          key={time}
-                          label={t(`time-${time}`)}
-                          active={timeOfDay === time}
-                          onClick={() => setTimeOfDay(time)}
-                        />
-                      ))}
-                    </div>
-                  </section>
+                    <section>
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3 block">
+                            {t('label-time-of-day')}
+                        </label>
+                        <div className="flex flex-col gap-2">
+                            {['morning','afternoon','evening'].map(time => (
+                                <OptionButton
+                                    key={time}
+                                    label={t(`time-${time}`)}
+                                    active={timeOfDay === time}
+                                    onClick={() => setTimeOfDay(time)}
+                                />
+                            ))}
+                        </div>
+                    </section>
 
-                  <section>
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3 block">
-                      {t('label-atmosphere')}
-                    </label>
-                    <div className="flex flex-col gap-2">
-                      {['intimate', 'social', 'romantic'].map(atm => (
-                        <OptionButton
-                          key={atm}
-                          label={t(`atmosphere-${atm}`)}
-                          active={atmosphere === atm}
-                          onClick={() => setAtmosphere(atm)}
-                        />
-                      ))}
-                    </div>
-                  </section>
+                    <section>
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3 block">
+                            {t('label-atmosphere')}
+                        </label>
+                        <div className="flex flex-col gap-2">
+                            {['intimate','social','romantic'].map(atm => (
+                                <OptionButton
+                                    key={atm}
+                                    label={t(`atmosphere-${atm}`)}
+                                    active={atmosphere === atm}
+                                    onClick={() => setAtmosphere(atm)}
+                                />
+                            ))}
+                        </div>
+                    </section>
+
+                    <button
+                        onClick={generateDate}
+                        disabled={loading}
+                        className={`w-full py-4 rounded-2xl font-bold text-lg transition-all duration-200
+                            ${loading
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'bg-[#B3282D] text-white hover:bg-[#962024] shadow-lg active:scale-[0.99]'
+                            }`}
+                    >
+                        {loading ? t('button-text-loading') : t('button-text-default')}
+                    </button>
                 </div>
 
-                <button
-                  onClick={generateDate}
-                  disabled={loading}
-                  className={`w-full py-4 rounded-2xl font-bold text-lg transition-all ${
-                    loading
-                      ? 'bg-gray-100 text-gray-400'
-                      : 'bg-[#B3282D] text-white hover:bg-[#962024]'
-                  }`}
-                >
-                  {loading ? t('button-text-loading') : t('button-text-default')}
-                </button>
+                {loading && <LoadingSkeleton />}
 
-              </div>
+                {error && (
+                    <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-center mb-8 border border-red-100">
+                        <p className="font-medium">{error}</p>
+                    </div>
+                )}
+
+                {result && !loading && (
+                    <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100 animate-fade-in">
+                        <div className="bg-[#8EBAE5] p-6 text-white text-center">
+                            <span className="bg-white/20 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">
+                                {result.Location}
+                            </span>
+                            <h2 className="text-2xl font-black mt-3 uppercase">{result.Title}</h2>
+                        </div>
+
+                        <div className="p-6">
+                            <p className="text-gray-600 italic mb-6 text-center">
+                                "{result.Description}"
+                            </p>
+
+                            <div className="grid grid-cols-2 gap-4 text-xs">
+                                <div className="bg-gray-50 p-3 rounded-xl text-center">
+                                    <div className="text-gray-400 font-bold uppercase mb-1">
+                                        {t('result-hours')}
+                                    </div>
+                                    <div className="font-semibold">{result.Hours}</div>
+                                </div>
+
+                                <div className="bg-gray-50 p-3 rounded-xl text-center">
+                                    <div className="text-gray-400 font-bold uppercase mb-1">
+                                        {t('result-best-time')}
+                                    </div>
+                                    <div className="font-semibold">{result.BestTime}</div>
+                                </div>
+                            </div>
+
+                            <a
+                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(result.MapQuery || result.Title + " Chicago")}`}
+                                target="_blank"
+                                className="mt-6 block text-center py-4 bg-gray-100 rounded-2xl font-bold text-gray-700 hover:bg-gray-200 transition-colors"
+                            >
+                                {t('map-link-text')}
+                            </a>
+                        </div>
+                    </div>
+                )}
+
             </div>
-
-            {error && (
-              <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-center mb-8">
-                <p className="font-bold">{error}</p>
-              </div>
-            )}
-
-            {result && !loading && (
-              <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
-                <div className="bg-[#8EBAE5] p-6 text-white text-center">
-                  <span className="bg-white/20 px-3 py-1 rounded-full text-[10px] font-bold uppercase">
-                    {result.Location}
-                  </span>
-                  <h2 className="text-2xl font-black mt-3 uppercase">
-                    {result.Title}
-                  </h2>
-                </div>
-
-                <div className="p-6">
-                  <p className="text-gray-600 italic mb-6 text-center">
-                    "{result.Description}"
-                  </p>
-
-                  <div className="grid grid-cols-2 gap-4 text-xs">
-                    <div className="bg-gray-50 p-3 rounded-xl text-center">
-                      <div className="text-gray-400 font-bold uppercase mb-1">
-                        {t('result-hours')}
-                      </div>
-                      <div className="font-semibold">{result.Hours}</div>
-                    </div>
-
-                    <div className="bg-gray-50 p-3 rounded-xl text-center">
-                      <div className="text-gray-400 font-bold uppercase mb-1">
-                        {t('result-best-time')}
-                      </div>
-                      <div className="font-semibold">{result.BestTime}</div>
-                    </div>
-                  </div>
-
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                      result.MapQuery || result.Title + " Chicago"
-                    )}`}
-                    target="_blank"
-                    className="mt-6 block text-center py-4 bg-gray-100 rounded-2xl font-bold text-gray-700 hover:bg-gray-200"
-                  >
-                    📍 {t('map-link-text')}
-                  </a>
-                </div>
-              </div>
-            )}
-
-          </div>
         </div>
-      );
-    }
+    );
+}
 
-    const root = ReactDOM.createRoot(document.getElementById("root"));
-    root.render(<App />);
-  </script>
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
 </body>
 </html>
