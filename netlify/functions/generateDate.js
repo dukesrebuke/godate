@@ -27,15 +27,17 @@ export async function handler(event) {
 
   const { dateType, timeOfDay, atmosphere, price, lang } = payload;
 
-  /* ---------- LANGUAGE-AWARE PROMPTS ---------- */
+  /* IMPORTANT:
+     JSON KEYS MUST REMAIN IN ENGLISH
+     ONLY VALUES CHANGE LANGUAGE
+  */
 
   const systemPromptEn = `
 You are a knowledgeable Chicago local guide.
-Suggest ONE specific, real location or activity for a date in Chicago.
-Avoid tourist clichés. Favor authentic, well-liked local spots.
-Focus on safety, cleanliness, and quality.
+Suggest ONE specific, real date location or activity in Chicago.
+Avoid tourist clichés. Favor authentic, local spots.
 
-Respond ONLY in valid JSON using this exact schema:
+Respond ONLY in valid JSON using EXACTLY this schema:
 {
   "Title": "Name",
   "Location": "Neighborhood",
@@ -50,10 +52,13 @@ Respond ONLY in valid JSON using this exact schema:
   const systemPromptEs = `
 Eres un guía local experto de Chicago.
 Sugiere UN solo lugar o actividad real para una cita en Chicago.
-Evita clichés turísticos. Prioriza lugares auténticos y bien valorados.
-Enfócate en seguridad, limpieza y calidad.
+Evita clichés turísticos. Prioriza lugares auténticos.
 
-Responde ÚNICAMENTE en JSON válido usando este esquema exacto:
+IMPORTANTE:
+Las CLAVES del JSON deben mantenerse en INGLÉS.
+SOLO los VALORES deben estar en español.
+
+Responde ÚNICAMENTE en JSON válido usando EXACTAMENTE este esquema:
 {
   "Title": "Nombre",
   "Location": "Barrio",
@@ -84,8 +89,6 @@ Idioma: Español
   const systemPrompt = lang === "es" ? systemPromptEs : systemPromptEn;
   const userPrompt = lang === "es" ? userPromptEs : userPromptEn;
 
-  /* ---------- GROQ REQUEST ---------- */
-
   try {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -105,7 +108,7 @@ Idioma: Español
     });
 
     if (!response.ok) {
-      throw new Error("Groq API request failed");
+      throw new Error("Groq API failed");
     }
 
     const data = await response.json();
