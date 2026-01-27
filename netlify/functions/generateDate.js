@@ -16,7 +16,6 @@ export async function handler(event) {
   }
 
   let payload;
-
   try {
     payload = JSON.parse(event.body);
   } catch {
@@ -28,10 +27,13 @@ export async function handler(event) {
 
   const { dateType, timeOfDay, atmosphere, price, lang } = payload;
 
-  const systemPrompt = `
+  /* ---------- LANGUAGE-AWARE PROMPTS ---------- */
+
+  const systemPromptEn = `
 You are a knowledgeable Chicago local guide.
 Suggest ONE specific, real location or activity for a date in Chicago.
-Focus on safe, clean, and enjoyable environments.
+Avoid tourist clichés. Favor authentic, well-liked local spots.
+Focus on safety, cleanliness, and quality.
 
 Respond ONLY in valid JSON using this exact schema:
 {
@@ -45,13 +47,44 @@ Respond ONLY in valid JSON using this exact schema:
 }
 `.trim();
 
-  const userQuery = `
-Type: ${dateType}
-Time: ${timeOfDay}
-Atmosphere: ${atmosphere}
-Price: ${price}
-Language: ${lang === "es" ? "Spanish" : "English"}
+  const systemPromptEs = `
+Eres un guía local experto de Chicago.
+Sugiere UN solo lugar o actividad real para una cita en Chicago.
+Evita clichés turísticos. Prioriza lugares auténticos y bien valorados.
+Enfócate en seguridad, limpieza y calidad.
+
+Responde ÚNICAMENTE en JSON válido usando este esquema exacto:
+{
+  "Title": "Nombre",
+  "Location": "Barrio",
+  "Description": "1-2 oraciones",
+  "Hours": "Horario",
+  "BestTime": "Mejor momento",
+  "Occupancy": "Nivel de gente",
+  "MapQuery": "Término de búsqueda"
+}
 `.trim();
+
+  const userPromptEn = `
+Date type: ${dateType}
+Time of day: ${timeOfDay}
+Atmosphere: ${atmosphere}
+Price range: ${price}
+Language: English
+`.trim();
+
+  const userPromptEs = `
+Tipo de cita: ${dateType}
+Hora del día: ${timeOfDay}
+Ambiente: ${atmosphere}
+Rango de precio: ${price}
+Idioma: Español
+`.trim();
+
+  const systemPrompt = lang === "es" ? systemPromptEs : systemPromptEn;
+  const userPrompt = lang === "es" ? userPromptEs : userPromptEn;
+
+  /* ---------- GROQ REQUEST ---------- */
 
   try {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -64,10 +97,10 @@ Language: ${lang === "es" ? "Spanish" : "English"}
         model: "llama-3.3-70b-versatile",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: userQuery }
+          { role: "user", content: userPrompt }
         ],
         response_format: { type: "json_object" },
-        temperature: 0.7
+        temperature: 0.65
       })
     });
 
@@ -80,13 +113,11 @@ Language: ${lang === "es" ? "Spanish" : "English"}
 
     return {
       statusCode: 200,
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: content
     };
 
-  } catch (error) {
+  } catch {
     return {
       statusCode: 500,
       body: JSON.stringify({ error: "AI request failed" })
