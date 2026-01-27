@@ -27,67 +27,47 @@ export async function handler(event) {
 
   const { dateType, timeOfDay, atmosphere, price, lang } = payload;
 
-  /* IMPORTANT:
-     JSON KEYS MUST REMAIN IN ENGLISH
-     ONLY VALUES CHANGE LANGUAGE
-  */
-
-  const systemPromptEn = `
-You are a knowledgeable Chicago local guide.
-Suggest ONE specific, real date location or activity in Chicago.
-Avoid tourist clichés. Favor authentic, local spots.
-
-Respond ONLY in valid JSON using EXACTLY this schema:
-{
-  "Title": "Name",
-  "Location": "Neighborhood",
-  "Description": "1-2 sentences",
-  "Hours": "Times",
-  "BestTime": "When to go",
-  "Occupancy": "Crowd level",
-  "MapQuery": "Search term"
-}
-`.trim();
-
-  const systemPromptEs = `
+  const systemPrompt = lang === "es"
+    ? `
 Eres un guía local experto de Chicago.
-Sugiere UN solo lugar o actividad real para una cita en Chicago.
-Evita clichés turísticos. Prioriza lugares auténticos.
+Sugiere UN solo lugar o actividad real para una cita.
+Evita clichés turísticos.
 
 IMPORTANTE:
-Las CLAVES del JSON deben mantenerse en INGLÉS.
-SOLO los VALORES deben estar en español.
+Las claves del JSON deben permanecer en INGLÉS.
+Solo los valores deben estar en español.
 
-Responde ÚNICAMENTE en JSON válido usando EXACTAMENTE este esquema:
+Responde solo con JSON válido usando este esquema exacto:
 {
   "Title": "Nombre",
   "Location": "Barrio",
-  "Description": "1-2 oraciones",
+  "Description": "Descripción",
   "Hours": "Horario",
   "BestTime": "Mejor momento",
   "Occupancy": "Nivel de gente",
-  "MapQuery": "Término de búsqueda"
+  "MapQuery": "Búsqueda"
+}
+`.trim()
+    : `
+You are a knowledgeable Chicago local guide.
+Suggest ONE real date location or activity.
+Avoid tourist clichés.
+
+Respond only with valid JSON using this exact schema:
+{
+  "Title": "Name",
+  "Location": "Neighborhood",
+  "Description": "Description",
+  "Hours": "Hours",
+  "BestTime": "Best time",
+  "Occupancy": "Crowd level",
+  "MapQuery": "Search query"
 }
 `.trim();
 
-  const userPromptEn = `
-Date type: ${dateType}
-Time of day: ${timeOfDay}
-Atmosphere: ${atmosphere}
-Price range: ${price}
-Language: English
-`.trim();
-
-  const userPromptEs = `
-Tipo de cita: ${dateType}
-Hora del día: ${timeOfDay}
-Ambiente: ${atmosphere}
-Rango de precio: ${price}
-Idioma: Español
-`.trim();
-
-  const systemPrompt = lang === "es" ? systemPromptEs : systemPromptEn;
-  const userPrompt = lang === "es" ? userPromptEs : userPromptEn;
+  const userPrompt = lang === "es"
+    ? `Tipo: ${dateType}, Hora: ${timeOfDay}, Ambiente: ${atmosphere}, Precio: ${price}.`
+    : `Type: ${dateType}, Time: ${timeOfDay}, Atmosphere: ${atmosphere}, Price: ${price}.`;
 
   try {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -103,27 +83,44 @@ Idioma: Español
           { role: "user", content: userPrompt }
         ],
         response_format: { type: "json_object" },
-        temperature: 0.65
+        temperature: 0.7
       })
     });
 
     if (!response.ok) {
-      throw new Error("Groq API failed");
+      throw new Error("AI request failed");
     }
 
     const data = await response.json();
-    const content = data.choices[0].message.content;
+    let result = JSON.parse(data.choices[0].message.content);
+
+    // SAFE FALLBACKS (language-aware)
+    const defaults = lang === "es"
+      ? {
+          Hours: "Horario variable",
+          BestTime: "Mejor por la tarde o noche",
+          Occupancy: "Nivel moderado de gente"
+        }
+      : {
+          Hours: "Hours vary",
+          BestTime: "Best in the afternoon or evening",
+          Occupancy: "Moderate crowd"
+        };
+
+    result.Hours = result.Hours?.trim() || defaults.Hours;
+    result.BestTime = result.BestTime?.trim() || defaults.BestTime;
+    result.Occupancy = result.Occupancy?.trim() || defaults.Occupancy;
 
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
-      body: content
+      body: JSON.stringify(result)
     };
 
   } catch {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: "AI request failed" })
+      body: JSON.stringify({ error: "Failed to generate date idea" })
     };
   }
 }
