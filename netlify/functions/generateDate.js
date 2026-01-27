@@ -83,7 +83,7 @@ Respond only with valid JSON using this exact schema:
           { role: "user", content: userPrompt }
         ],
         response_format: { type: "json_object" },
-        temperature: 0.7
+        temperature: 1.1
       })
     });
 
