@@ -2,7 +2,7 @@ export async function handler(event) {
   if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
-      body: "Method Not Allowed"
+      body: JSON.stringify({ error: "Method not allowed" })
     };
   }
 
@@ -11,34 +11,54 @@ export async function handler(event) {
   if (!GROQ_API_KEY) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: "Groq API key missing on server" })
+      body: JSON.stringify({ error: "Groq API key missing" })
     };
   }
 
   let payload;
+
   try {
     payload = JSON.parse(event.body);
   } catch {
     return {
       statusCode: 400,
-      body: JSON.stringify({ error: "Invalid JSON body" })
+      body: JSON.stringify({ error: "Invalid request body" })
     };
   }
 
   const { dateType, timeOfDay, atmosphere, price, lang } = payload;
 
-  const systemPrompt = `You are a helpful Chicago local guide. Suggest one specific, real location/activity for a date in the Chicago area.
-Respond ONLY in JSON format:
-{"Title":"Name","Location":"Neighborhood","Description":"1-2 sentences","Hours":"Times","BestTime":"When to go","Occupancy":"Crowd level","MapQuery":"Search term"}`;
+  const systemPrompt = `
+You are a knowledgeable Chicago local guide.
+Suggest ONE specific, real location or activity for a date in Chicago.
+Focus on safe, clean, and enjoyable environments.
 
-  const userQuery = `Type: ${dateType}, Time: ${timeOfDay}, Atmosphere: ${atmosphere}, Price: ${price}. Respond in ${lang === "en" ? "English" : "Spanish"}.`;
+Respond ONLY in valid JSON using this exact schema:
+{
+  "Title": "Name",
+  "Location": "Neighborhood",
+  "Description": "1-2 sentences",
+  "Hours": "Times",
+  "BestTime": "When to go",
+  "Occupancy": "Crowd level",
+  "MapQuery": "Search term"
+}
+`.trim();
+
+  const userQuery = `
+Type: ${dateType}
+Time: ${timeOfDay}
+Atmosphere: ${atmosphere}
+Price: ${price}
+Language: ${lang === "es" ? "Spanish" : "English"}
+`.trim();
 
   try {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${GROQ_API_KEY}`
+        "Authorization": `Bearer ${GROQ_API_KEY}`
       },
       body: JSON.stringify({
         model: "llama-3.3-70b-versatile",
@@ -52,11 +72,7 @@ Respond ONLY in JSON format:
     });
 
     if (!response.ok) {
-      const text = await response.text();
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: "Groq API failed", details: text })
-      };
+      throw new Error("Groq API request failed");
     }
 
     const data = await response.json();
@@ -64,13 +80,16 @@ Respond ONLY in JSON format:
 
     return {
       statusCode: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json"
+      },
       body: content
     };
-  } catch (err) {
+
+  } catch (error) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: err.message })
+      body: JSON.stringify({ error: "AI request failed" })
     };
   }
 }
