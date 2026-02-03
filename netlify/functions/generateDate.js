@@ -6,12 +6,11 @@ export async function handler(event) {
     };
   }
 
-  const GROQ_API_KEY = process.env.GROQ_API_KEY;
-
-  if (!GROQ_API_KEY) {
+  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+  if (!GEMINI_API_KEY) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: "Groq API key missing on server" })
+      body: JSON.stringify({ error: "Gemini API key missing on server" })
     };
   }
 
@@ -28,39 +27,45 @@ export async function handler(event) {
   const { dateType, timeOfDay, atmosphere, price, lang } = payload;
 
   const systemPrompt = `You are a helpful Chicago local guide. Suggest one specific, real location/activity for a date in the Chicago area.
-Respond ONLY in JSON format:
-{"Title":"Name","Location":"Neighborhood","Description":"1-2 sentences","Hours":"Times","BestTime":"When to go","Occupancy":"Crowd level","MapQuery":"Search term"}`;
+Respond ONLY in valid JSON format with this exact structure:
+{"Title":"Name","Location":"Neighborhood","Description":"1-2 sentences","Hours":"Times","BestTime":"When to go","Occupancy":"Crowd level","MapQuery":"Search term"}
+
+Do not include any text before or after the JSON object.`;
 
   const userQuery = `Type: ${dateType}, Time: ${timeOfDay}, Atmosphere: ${atmosphere}, Price: ${price}. Respond in ${lang === "en" ? "English" : "Spanish"}.`;
 
   try {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${GROQ_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userQuery }
-        ],
-        response_format: { type: "json_object" },
-        temperature: 0.7
-      })
-    });
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                { text: systemPrompt + "\n\n" + userQuery }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.7,
+            responseMimeType: "application/json"
+          }
+        })
+      }
+    );
 
     if (!response.ok) {
       const text = await response.text();
       return {
         statusCode: 500,
-        body: JSON.stringify({ error: "Groq API failed", details: text })
+        body: JSON.stringify({ error: "Gemini API failed", details: text })
       };
     }
 
     const data = await response.json();
-    const content = data.choices[0].message.content;
+    const content = data.candidates[0].content.parts[0].text;
 
     return {
       statusCode: 200,
