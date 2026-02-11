@@ -4,8 +4,6 @@
 // In-memory recent suggestion store
 // ==============================
 const RECENT_SUGGESTIONS = new Map();
-// key: normalized MapQuery or Title
-// value: timestamp (ms)
 
 const COOLDOWN_MS = 1000 * 60 * 60 * 24; // 24 hours
 const MAX_EXCLUSIONS = 8;
@@ -117,9 +115,8 @@ Respond in ${lang === "en" ? "English" : "Spanish"}.
   ].filter(Boolean).join("\n\n");
 
   async function callGemini() {
-   const response = await fetch(
-  `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -132,8 +129,7 @@ Respond in ${lang === "en" ? "English" : "Spanish"}.
           generationConfig: {
             temperature: 0.8,
             topP: 0.9,
-            maxOutputTokens: 350,
-            responseMimeType: "application/json"
+            maxOutputTokens: 350
           }
         })
       }
