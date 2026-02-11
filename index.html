@@ -15,7 +15,77 @@
 <style>
 body { 
   font-family: 'Inter', sans-serif; 
-  background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+  background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  color: white;
+  padding: 16px 32px;
+  border-radius: 12px;
+  font-weight: 600;
+  box-shadow: 0 10px 25px rgba(79, 70, 229, 0.3);
+  transition: all 0.3s ease;
+  display: inline-block;
+  text-decoration: none;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%);
+  box-shadow: 0 15px 35px rgba(79, 70, 229, 0.4);
+  transform: translateY(-2px);
+}
+
+.btn-generate {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  color: white;
+  padding: 16px;
+  border-radius: 12px;
+  font-weight: 600;
+  box-shadow: 0 10px 25px rgba(79, 70, 229, 0.3);
+  transition: all 0.3s ease;
+  width: 100%;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.btn-generate:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%);
+  box-shadow: 0 15px 35px rgba(79, 70, 229, 0.4);
+  transform: translateY(-2px);
+}
+
+.btn-generate:disabled {
+  background: #e2e8f0;
+  color: #64748b;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn-option {
+  padding: 10px 20px;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: 1px solid #e2e8f0;
+  background: white;
+  color: #334155;
+}
+
+.btn-option:hover {
+  background: #eef2ff;
+  color: #4f46e5;
+  border-color: #4f46e5;
+}
+
+.btn-option-active {
+  background: #4f46e5;
+  color: white;
+  border-color: #4f46e5;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
 }
 </style>
 </head>
@@ -74,11 +144,7 @@ function App() {
   const Option = ({ value, current, set, label }) => (
     <button
       onClick={() => set(value)}
-      className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all ${
-        current === value
-          ? "bg-indigo-500 text-white shadow-md"
-          : "bg-white text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 shadow-sm"
-      }`}
+      className={`btn-option ${current === value ? 'btn-option-active' : ''}`}
     >
       {label}
     </button>
@@ -90,10 +156,10 @@ function App() {
       <div className="bg-white rounded-3xl shadow-2xl p-10 text-center">
 
         <div className="mb-12">
-          <h1 className="text-5xl font-light tracking-tight text-gray-800 mb-2">
+          <h1 className="text-5xl font-light tracking-tight text-slate-800 mb-2">
             ChiDate
           </h1>
-          <p className="text-gray-400 text-xs tracking-[0.3em] uppercase font-light">
+          <p className="text-slate-500 text-xs tracking-[0.3em] uppercase font-medium">
             Curated Chicago Date Experiences
           </p>
         </div>
@@ -101,7 +167,7 @@ function App() {
         <div className="space-y-8">
 
           <div>
-            <p className="text-xs uppercase tracking-widest text-gray-400 mb-3 font-medium">Date Type</p>
+            <p className="text-xs uppercase tracking-widest text-slate-600 mb-3 font-semibold">Date Type</p>
             <div className="flex flex-wrap gap-2.5 justify-center">
               <Option value="adventurous" current={dateType} set={setDateType} label="Adventurous" />
               <Option value="relaxing" current={dateType} set={setDateType} label="Relaxing" />
@@ -111,7 +177,7 @@ function App() {
           </div>
 
           <div>
-            <p className="text-xs uppercase tracking-widest text-gray-400 mb-3 font-medium">Time</p>
+            <p className="text-xs uppercase tracking-widest text-slate-600 mb-3 font-semibold">Time</p>
             <div className="flex gap-2.5 justify-center">
               <Option value="morning" current={timeOfDay} set={setTimeOfDay} label="Morning" />
               <Option value="afternoon" current={timeOfDay} set={setTimeOfDay} label="Afternoon" />
@@ -120,7 +186,7 @@ function App() {
           </div>
 
           <div>
-            <p className="text-xs uppercase tracking-widest text-gray-400 mb-3 font-medium">Atmosphere</p>
+            <p className="text-xs uppercase tracking-widest text-slate-600 mb-3 font-semibold">Atmosphere</p>
             <div className="flex gap-2.5 justify-center">
               <Option value="intimate" current={atmosphere} set={setAtmosphere} label="Intimate" />
               <Option value="social" current={atmosphere} set={setAtmosphere} label="Social" />
@@ -129,7 +195,7 @@ function App() {
           </div>
 
           <div>
-            <p className="text-xs uppercase tracking-widest text-gray-400 mb-3 font-medium">Price</p>
+            <p className="text-xs uppercase tracking-widest text-slate-600 mb-3 font-semibold">Price</p>
             <div className="flex gap-2.5 justify-center">
               <Option value="budget" current={price} set={setPrice} label="Budget" />
               <Option value="mid" current={price} set={setPrice} label="Mid" />
@@ -140,11 +206,7 @@ function App() {
           <button
             onClick={generateDate}
             disabled={loading}
-            className={`w-full py-4 rounded-xl font-semibold tracking-wide transition-all shadow-lg ${
-              loading
-                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                : "bg-gradient-to-r from-indigo-500 to-purple-500 text-white hover:from-indigo-600 hover:to-purple-600 hover:shadow-xl"
-            }`}
+            className="btn-generate"
           >
             {loading ? "Curating..." : "Curate My Date"}
           </button>
@@ -152,7 +214,7 @@ function App() {
         </div>
 
         {error && (
-          <div className="mt-8 text-red-500 text-center text-sm">
+          <div className="mt-8 text-red-600 text-center text-sm font-medium">
             {error}
           </div>
         )}
@@ -162,26 +224,26 @@ function App() {
       {result && (
         <div className="mt-8 bg-white rounded-3xl shadow-2xl p-10 text-center">
 
-          <p className="text-xs uppercase tracking-widest text-gray-400 mb-3 font-medium">
+          <p className="text-xs uppercase tracking-widest text-slate-500 mb-3 font-semibold">
             {result.Location}
           </p>
 
-          <h2 className="text-4xl font-light text-gray-800 mb-4">
+          <h2 className="text-4xl font-light text-slate-900 mb-4">
             {result.Title}
           </h2>
 
-          <p className="text-gray-500 italic mb-8 leading-relaxed">
+          <p className="text-slate-600 italic mb-8 leading-relaxed">
             {result.Description}
           </p>
 
           <div className="grid grid-cols-2 gap-6 text-sm mb-8">
             <div>
-              <p className="text-gray-400 uppercase text-xs mb-1 font-medium tracking-wider">Hours</p>
-              <p className="text-gray-700">{result.Hours}</p>
+              <p className="text-slate-500 uppercase text-xs mb-1 font-semibold tracking-wider">Hours</p>
+              <p className="text-slate-800">{result.Hours}</p>
             </div>
             <div>
-              <p className="text-gray-400 uppercase text-xs mb-1 font-medium tracking-wider">Best Time</p>
-              <p className="text-gray-700">{result.BestTime}</p>
+              <p className="text-slate-500 uppercase text-xs mb-1 font-semibold tracking-wider">Best Time</p>
+              <p className="text-slate-800">{result.BestTime}</p>
             </div>
           </div>
 
@@ -191,7 +253,7 @@ function App() {
             )}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-block px-8 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl font-semibold hover:from-indigo-600 hover:to-purple-600 transition-all shadow-lg hover:shadow-xl"
+            className="btn-primary"
           >
             View on Map
           </a>
