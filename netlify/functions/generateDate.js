@@ -188,4 +188,3 @@ Respond in ${lang === "en" ? "English" : "Spanish"}.
     };
   }
 }
-EOF
