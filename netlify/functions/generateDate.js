@@ -10,8 +10,8 @@ const MAX_EXCLUSIONS = 8;
 // ==============================
 // Helper functions
 // ==============================
-function normalizeKey(str = "") {
-  return str.toLowerCase().replace(/\s+/g, " ").trim();
+function normalizeKey(str) {
+  return str?.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
 function pruneOldSuggestions() {
@@ -30,24 +30,21 @@ function buildExclusionPrompt() {
   if (!recent.length) return "";
 
   return `
-Do NOT suggest any of the following places (they were recently used):
+Do NOT suggest any of the following places:
 - ${recent.join("\n- ")}
 `.trim();
 }
 
-// Attempt to repair truncated JSON
-function attemptJSONRepair(text) {
-  try {
-    return JSON.parse(text);
-  } catch {}
+// Extract first valid JSON object from text
+function extractJSON(text) {
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) return null;
 
   try {
-    // Try to auto-close JSON
-    const fixed = text.trim() + '"}';
-    return JSON.parse(fixed);
-  } catch {}
-
-  return null;
+    return JSON.parse(match[0]);
+  } catch {
+    return null;
+  }
 }
 
 // ==============================
@@ -80,40 +77,37 @@ export async function handler(event) {
   const { dateType, timeOfDay, atmosphere, price, lang } = payload;
 
   const systemPrompt = `
-You are a Chicago local curator, not a tourist guide.
+You are a Chicago local curator.
 
-Generate ONE specific, real date idea in Chicago.
-Prefer lesser-known but real venues.
-Avoid tourist landmarks and clichés.
+Return ONE specific real Chicago date idea.
 
-Forbidden examples:
-Millennium Park
-Navy Pier
-Riverwalk
-romantic stroll
-cozy restaurant
+You MUST return a COMPLETE valid JSON object.
+Do NOT stop early.
+Do NOT truncate.
+Do NOT include markdown.
+Do NOT include commentary.
+Output JSON only.
+
+The JSON MUST include ALL fields:
+
+{
+  "Title": "string",
+  "Location": "string",
+  "Description": "string",
+  "Hours": "string",
+  "BestTime": "string",
+  "Occupancy": "Low | Medium | High",
+  "MapQuery": "string"
+}
 
 Rules:
-- Choose ONE specific Chicago neighborhood
-- Be concrete and vivid
-- No explanations
-- Output JSON only
-- No markdown
-- No text outside the JSON
-
-Exact schema:
-{
-  "Title": "",
-  "Location": "",
-  "Description": "",
-  "Hours": "",
-  "BestTime": "",
-  "Occupancy": "Low | Medium | High",
-  "MapQuery": ""
-}
+- Choose ONE real Chicago neighborhood
+- Be vivid but concise
+- Avoid tourist landmarks
+- Ensure the JSON object is fully closed with }
 `.trim();
 
-  const userQuery = `
+  const userPrompt = `
 Date type: ${dateType}
 Time of day: ${timeOfDay}
 Atmosphere: ${atmosphere}
@@ -123,11 +117,7 @@ Respond in ${lang === "en" ? "English" : "Spanish"}.
 
   const exclusionPrompt = buildExclusionPrompt();
 
-  const fullPrompt = [
-    systemPrompt,
-    exclusionPrompt,
-    userQuery
-  ]
+  const fullPrompt = [systemPrompt, exclusionPrompt, userPrompt]
     .filter(Boolean)
     .join("\n\n");
 
@@ -144,23 +134,26 @@ Respond in ${lang === "en" ? "English" : "Spanish"}.
             }
           ],
           generationConfig: {
-            temperature: 0.9,
-            topP: 0.95,
-            maxOutputTokens: 800
+            temperature: 0.7,
+            topP: 0.9,
+            maxOutputTokens: 1000
           }
         })
       }
     );
 
     if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`Gemini API error: ${text}`);
+      const errorText = await response.text();
+      throw new Error(`Gemini API error: ${errorText}`);
     }
 
     const data = await response.json();
 
-    if (!data.candidates?.length) {
-      throw new Error("No candidates returned from Gemini");
+    if (
+      !data.candidates ||
+      !data.candidates[0]?.content?.parts?.[0]?.text
+    ) {
+      throw new Error("Unexpected Gemini response structure");
     }
 
     return data.candidates[0].content.parts[0].text;
@@ -168,7 +161,13 @@ Respond in ${lang === "en" ? "English" : "Spanish"}.
 
   try {
     let rawText = await callGemini();
-    let parsed = attemptJSONRepair(rawText);
+    let parsed = extractJSON(rawText);
+
+    // Retry once if JSON invalid
+    if (!parsed) {
+      rawText = await callGemini();
+      parsed = extractJSON(rawText);
+    }
 
     if (!parsed) {
       return {
@@ -183,12 +182,9 @@ Respond in ${lang === "en" ? "English" : "Spanish"}.
     const key = normalizeKey(parsed.MapQuery || parsed.Title);
     const now = Date.now();
 
-    // Retry once if recently suggested
     if (RECENT_SUGGESTIONS.has(key)) {
-      try {
-        rawText = await callGemini();
-        parsed = attemptJSONRepair(rawText);
-      } catch {}
+      rawText = await callGemini();
+      parsed = extractJSON(rawText);
     }
 
     RECENT_SUGGESTIONS.set(key, now);
@@ -202,7 +198,9 @@ Respond in ${lang === "en" ? "English" : "Spanish"}.
   } catch (err) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: err.message })
+      body: JSON.stringify({
+        error: err.message
+      })
     };
   }
 }
