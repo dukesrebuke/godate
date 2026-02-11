@@ -4,14 +4,13 @@
 // In-memory recent suggestion store
 // ==============================
 const RECENT_SUGGESTIONS = new Map();
-
 const COOLDOWN_MS = 1000 * 60 * 60 * 24; // 24 hours
 const MAX_EXCLUSIONS = 8;
 
 // ==============================
 // Helper functions
 // ==============================
-function normalizeKey(str) {
+function normalizeKey(str = "") {
   return str.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
@@ -36,6 +35,21 @@ Do NOT suggest any of the following places (they were recently used):
 `.trim();
 }
 
+// Attempt to repair truncated JSON
+function attemptJSONRepair(text) {
+  try {
+    return JSON.parse(text);
+  } catch {}
+
+  try {
+    // Try to auto-close JSON
+    const fixed = text.trim() + '"}';
+    return JSON.parse(fixed);
+  } catch {}
+
+  return null;
+}
+
 // ==============================
 // Netlify handler
 // ==============================
@@ -45,6 +59,7 @@ export async function handler(event) {
   }
 
   const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
   if (!GEMINI_API_KEY) {
     return {
       statusCode: 500,
@@ -112,7 +127,9 @@ Respond in ${lang === "en" ? "English" : "Spanish"}.
     systemPrompt,
     exclusionPrompt,
     userQuery
-  ].filter(Boolean).join("\n\n");
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 
   async function callGemini() {
     const response = await fetch(
@@ -127,9 +144,9 @@ Respond in ${lang === "en" ? "English" : "Spanish"}.
             }
           ],
           generationConfig: {
-            temperature: 0.8,
-            topP: 0.9,
-            maxOutputTokens: 350
+            temperature: 0.9,
+            topP: 0.95,
+            maxOutputTokens: 800
           }
         })
       }
@@ -141,16 +158,19 @@ Respond in ${lang === "en" ? "English" : "Spanish"}.
     }
 
     const data = await response.json();
+
+    if (!data.candidates?.length) {
+      throw new Error("No candidates returned from Gemini");
+    }
+
     return data.candidates[0].content.parts[0].text;
   }
 
   try {
     let rawText = await callGemini();
-    let parsed;
+    let parsed = attemptJSONRepair(rawText);
 
-    try {
-      parsed = JSON.parse(rawText);
-    } catch {
+    if (!parsed) {
       return {
         statusCode: 500,
         body: JSON.stringify({
@@ -163,10 +183,11 @@ Respond in ${lang === "en" ? "English" : "Spanish"}.
     const key = normalizeKey(parsed.MapQuery || parsed.Title);
     const now = Date.now();
 
+    // Retry once if recently suggested
     if (RECENT_SUGGESTIONS.has(key)) {
       try {
         rawText = await callGemini();
-        parsed = JSON.parse(rawText);
+        parsed = attemptJSONRepair(rawText);
       } catch {}
     }
 
