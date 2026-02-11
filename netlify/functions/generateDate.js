@@ -134,10 +134,11 @@ Respond in ${lang === "en" ? "English" : "Spanish"}.
             }
           ],
           generationConfig: {
-            temperature: 0.7,
-            topP: 0.9,
-            maxOutputTokens: 1000
-          }
+  temperature: 0.7,
+  topP: 0.9,
+  maxOutputTokens: 2048,
+  stopSequences: []
+}
         })
       }
     );
