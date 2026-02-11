@@ -7,6 +7,7 @@
 
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet" />
@@ -19,7 +20,7 @@ body { font-family: 'Inter', sans-serif; }
 <body class="bg-black text-white">
 <div id="root"></div>
 
-<script>
+<script type="text/babel">
 const { useState } = React;
 
 function App() {
@@ -174,6 +175,7 @@ function App() {
                 result.MapQuery || result.Title + " Chicago"
               )}`}
               target="_blank"
+              rel="noopener noreferrer"
               className="block mt-8 text-center py-3 bg-white text-black rounded-xl font-bold hover:bg-gray-200 transition-all"
             >
               View on Map
