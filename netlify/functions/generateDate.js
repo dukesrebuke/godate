@@ -7,6 +7,11 @@ const RECENT_SUGGESTIONS = new Map();
 const COOLDOWN_MS = 1000 * 60 * 60 * 24; // 24 hours
 const MAX_EXCLUSIONS = 8;
 
+// Rate limiting store
+const RATE_LIMIT = new Map();
+const RATE_LIMIT_WINDOW = 1000 * 60 * 60; // 1 hour
+const MAX_REQUESTS_PER_HOUR = 15; // Stay under the 20/day limit
+
 // ==============================
 // Helper functions
 // ==============================
@@ -47,6 +52,31 @@ function extractJSON(text) {
   }
 }
 
+// Rate limit check
+function checkRateLimit() {
+  const now = Date.now();
+  
+  // Clean old entries
+  for (const [ts] of RATE_LIMIT.entries()) {
+    if (now - ts > RATE_LIMIT_WINDOW) {
+      RATE_LIMIT.delete(ts);
+    }
+  }
+
+  // Check if we're over the limit
+  if (RATE_LIMIT.size >= MAX_REQUESTS_PER_HOUR) {
+    return false;
+  }
+
+  RATE_LIMIT.set(now, true);
+  return true;
+}
+
+// Sleep function for retry
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 // ==============================
 // Netlify handler
 // ==============================
@@ -61,6 +91,16 @@ export async function handler(event) {
     return {
       statusCode: 500,
       body: JSON.stringify({ error: "Gemini API key missing on server" })
+    };
+  }
+
+  // Check rate limit
+  if (!checkRateLimit()) {
+    return {
+      statusCode: 429,
+      body: JSON.stringify({ 
+        error: "Too many requests. Please try again in a few minutes." 
+      })
     };
   }
 
@@ -121,7 +161,7 @@ Respond in ${lang === "en" ? "English" : "Spanish"}.
     .filter(Boolean)
     .join("\n\n");
 
-  async function callGemini() {
+  async function callGemini(retryCount = 0) {
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
       {
@@ -134,18 +174,31 @@ Respond in ${lang === "en" ? "English" : "Spanish"}.
             }
           ],
           generationConfig: {
-  temperature: 0.7,
-  topP: 0.9,
-  maxOutputTokens: 2048,
-  stopSequences: []
-}
+            temperature: 0.7,
+            topP: 0.9,
+            maxOutputTokens: 2048,
+            stopSequences: []
+          }
         })
       }
     );
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Gemini API error: ${errorText}`);
+      const errorData = await response.json().catch(() => ({}));
+      
+      // Handle rate limit with retry
+      if (response.status === 429 && retryCount < 2) {
+        const retryAfter = errorData.error?.details?.find(
+          d => d["@type"] === "type.googleapis.com/google.rpc.RetryInfo"
+        )?.retryDelay;
+        
+        const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 5000;
+        await sleep(Math.min(waitTime, 10000)); // Max 10 second wait
+        
+        return callGemini(retryCount + 1);
+      }
+
+      throw new Error(`Gemini API error (${response.status}): ${errorData.error?.message || 'Unknown error'}`);
     }
 
     const data = await response.json();
@@ -200,7 +253,9 @@ Respond in ${lang === "en" ? "English" : "Spanish"}.
     return {
       statusCode: 500,
       body: JSON.stringify({
-        error: err.message
+        error: err.message.includes("quota") 
+          ? "Service temporarily unavailable due to high demand. Please try again in a few minutes."
+          : "Unable to generate date suggestion. Please try again."
       })
     };
   }
