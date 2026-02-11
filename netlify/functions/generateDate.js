@@ -1,34 +1,96 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+export async function handler(event) {
+  if (event.httpMethod !== "POST") {
+    return { statusCode: 405, body: "Method Not Allowed" };
+  }
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+  if (!GEMINI_API_KEY) {
+    return { statusCode: 500, body: JSON.stringify({ error: "Gemini API key missing" }) };
+  }
 
-exports.handler = async (event) => {
-  const { dateType, timeOfDay, atmosphere, price, lang } = JSON.parse(event.body);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  let payload;
+  try {
+    payload = JSON.parse(event.body);
+  } catch {
+    return { statusCode: 400, body: JSON.stringify({ error: "Invalid JSON body" }) };
+  }
 
-  const systemPrompt = `You are a trendy, plugged-in Chicago tastemaker who hates "tourist traps." 
-  Your goal is to suggest one highly specific, atmospheric date activity in the Chicagoland area.
-  
-  Rules:
-  - Niche over Notorious: Avoid Navy Pier, Millennium Park, or River North chains. 
-  - Price Range: Map the user's price selection to: $ (Budget), $$ (Mid), $$$ (Upscale), $$$$ (Luxury).
-  
-  Respond ONLY in valid JSON format:
-  {"Title":"Name","Location":"Neighborhood","Description":"1-2 sentences with sensory details","Hours":"Times","BestTime":"When to go","Occupancy":"Crowd level","PriceRange":"$ to $$$$","MapQuery":"Search term"}`;
+  const { dateType, timeOfDay, atmosphere, price, lang } = payload;
 
-  const userQuery = `Type: ${dateType}, Time: ${timeOfDay}, Atmosphere: ${atmosphere}, Price: ${price}. Respond in ${lang === "en" ? "English" : "Spanish"}.`;
+  const systemPrompt = `
+You are a Chicago local curator, not a tourist guide.
+
+Generate ONE specific, real date idea in Chicago.
+Prefer lesser-known but real venues.
+Avoid tourist landmarks and clichés.
+
+Forbidden examples:
+Millennium Park, Navy Pier, Riverwalk, romantic stroll, cozy restaurant
+
+Rules:
+- Choose one specific Chicago neighborhood
+- Be concrete and vivid
+- No explanations
+- Output JSON only
+
+Exact schema:
+{
+  "Title": "",
+  "Location": "",
+  "Description": "",
+  "Hours": "",
+  "BestTime": "",
+  "Occupancy": "Low | Medium | High",
+  "MapQuery": ""
+}
+`.trim();
+
+  const userQuery = `
+Date type: ${dateType}
+Time of day: ${timeOfDay}
+Atmosphere: ${atmosphere}
+Price range: ${price}
+Respond in ${lang === "en" ? "English" : "Spanish"}.
+`.trim();
 
   try {
-    const result = await model.generateContent([systemPrompt, userQuery]);
-    const response = await result.response;
-    let text = response.text().replace(/```json|```/g, "").trim();
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: systemPrompt + "\n\n" + userQuery }] }],
+          generationConfig: {
+            temperature: 0.7,
+            topP: 0.85,
+            maxOutputTokens: 350,
+            responseMimeType: "application/json"
+          }
+        })
+      }
+    );
+
+    if (!response.ok) {
+      return { statusCode: 500, body: JSON.stringify({ error: "Gemini API failed" }) };
+    }
+
+    const data = await response.json();
+    const content = data.candidates[0].content.parts[0].text;
+
+    let parsed;
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      return { statusCode: 500, body: JSON.stringify({ error: "Invalid JSON from Gemini", raw: content }) };
+    }
 
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
-      body: text
+      body: JSON.stringify(parsed)
     };
-  } catch (error) {
-    return { statusCode: 500, body: JSON.stringify({ error: "Local guide is busy. Try again!" }) };
+  } catch (err) {
+    return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
   }
-};
+}
