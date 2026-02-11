@@ -118,7 +118,8 @@ Respond in ${lang === "en" ? "English" : "Spanish"}.
 
   async function callGemini() {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent
+`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
