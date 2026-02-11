@@ -1,291 +1,192 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ChiDate | Chicago Date Generator</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ChiDate | Curated Chicago Dates</title>
 
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
 
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet" />
 
-  <style>
-    body { font-family: 'Inter', sans-serif; }
-  </style>
+<style>
+body { font-family: 'Inter', sans-serif; }
+</style>
 </head>
 
-<body class="bg-[#F4F4F9]">
-  <div id="root"></div>
+<body class="bg-black text-white">
+<div id="root"></div>
 
-  <script type="text/babel">
-    const { useState } = React;
+<script>
+const { useState } = React;
 
-    const TRANSLATIONS = {
-      en: {
-        'app-title': 'ChiDate',
-        'subtitle': 'The Ultimate Chicago Date Idea Generator',
-        'label-date-type': 'Type of Date',
-        'type-adventurous': 'Adventurous',
-        'type-relaxing': 'Relaxing',
-        'type-cultural': 'Cultural',
-        'type-foodie': 'Foodie',
-        'label-time-of-day': 'Time of Day',
-        'time-morning': 'Morning',
-        'time-afternoon': 'Afternoon',
-        'time-evening': 'Evening',
-        'label-atmosphere': 'Atmosphere',
-        'atmosphere-intimate': 'Intimate',
-        'atmosphere-social': 'Social',
-        'atmosphere-romantic': 'Romantic',
-        'label-price': 'Price Range',
-        'price-budget': 'Budget-Friendly',
-        'price-mid': 'Mid-Range',
-        'price-upscale': 'Upscale',
-        'button-text-default': 'Generate Date Idea',
-        'button-text-loading': 'Asking the local experts...',
-        'result-hours': 'Hours',
-        'result-best-time': 'Best Time',
-        'result-occupancy': 'Crowd Level',
-        'map-link-text': 'View on Google Maps',
-        'error-desc': 'The connection to the AI failed. Please try again.',
-      },
-      es: {
-        'app-title': 'ChiDate',
-        'subtitle': 'El Mejor Generador de Citas en Chicago',
-        'label-date-type': 'Tipo de Cita',
-        'type-adventurous': 'Aventurera',
-        'type-relaxing': 'Relajante',
-        'type-cultural': 'Cultural',
-        'type-foodie': 'Gastronómica',
-        'label-time-of-day': 'Hora del Día',
-        'time-morning': 'Mañana',
-        'time-afternoon': 'Tarde',
-        'time-evening': 'Noche',
-        'label-atmosphere': 'Ambiente',
-        'atmosphere-intimate': 'Íntimo',
-        'atmosphere-social': 'Social',
-        'atmosphere-romantic': 'Romántico',
-        'label-price': 'Rango de Precio',
-        'price-budget': 'Económico',
-        'price-mid': 'Medio',
-        'price-upscale': 'Premium',
-        'button-text-default': 'Generar Idea de Cita',
-        'button-text-loading': 'Consultando expertos locales...',
-        'result-hours': 'Horario',
-        'result-best-time': 'Mejor Momento',
-        'result-occupancy': 'Nivel de Gente',
-        'map-link-text': 'Ver en Google Maps',
-        'error-desc': 'La conexión con la IA falló. Intenta nuevamente.',
-      }
-    };
+function App() {
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
 
-    function App() {
-      const [lang, setLang] = useState('en');
-      const [loading, setLoading] = useState(false);
-      const [result, setResult] = useState(null);
-      const [error, setError] = useState(null);
+  const [dateType, setDateType] = useState('foodie');
+  const [timeOfDay, setTimeOfDay] = useState('evening');
+  const [atmosphere, setAtmosphere] = useState('romantic');
+  const [price, setPrice] = useState('mid');
 
-      const [dateType, setDateType] = useState('foodie');
-      const [timeOfDay, setTimeOfDay] = useState('evening');
-      const [atmosphere, setAtmosphere] = useState('romantic');
-      const [price, setPrice] = useState('mid');
+  const generateDate = async () => {
+    setLoading(true);
+    setError(null);
+    setResult(null);
 
-      const t = (key) => TRANSLATIONS[lang][key] || key;
+    try {
+      const response = await fetch("/.netlify/functions/generateDate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dateType,
+          timeOfDay,
+          atmosphere,
+          price,
+          lang: "en"
+        })
+      });
 
-      const generateDate = async () => {
-        setLoading(true);
-        setError(null);
-        setResult(null);
+      if (!response.ok) throw new Error("Request failed");
 
-        try {
-          const response = await fetch("/.netlify/functions/generateDate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              dateType,
-              timeOfDay,
-              atmosphere,
-              price,
-              lang
-            })
-          });
+      const data = await response.json();
+      setResult(data);
+    } catch (err) {
+      setError("The curator is unavailable. Try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-          if (!response.ok) {
-            throw new Error("Function request failed");
-          }
+  const Option = ({ value, current, set, label }) => (
+    <button
+      onClick={() => set(value)}
+      className={`px-4 py-2 rounded-full text-sm transition-all border ${
+        current === value
+          ? "bg-white text-black border-white"
+          : "border-gray-700 text-gray-400 hover:border-white hover:text-white"
+      }`}
+    >
+      {label}
+    </button>
+  );
 
-          const data = await response.json();
-          setResult(data);
-        } catch (err) {
-          console.error(err);
-          setError(t('error-desc'));
-        } finally {
-          setLoading(false);
-        }
-      };
+  return (
+    <div className="min-h-screen flex flex-col justify-center px-6">
+      <div className="max-w-xl mx-auto w-full">
 
-      const OptionButton = ({ label, active, onClick }) => (
-        <button
-          onClick={onClick}
-          className={`p-3 rounded-xl border-2 transition-all text-sm font-medium ${
-            active
-              ? 'bg-[#B3282D] border-[#B3282D] text-white shadow-md'
-              : 'bg-white border-gray-100 text-gray-600 hover:border-red-200'
-          }`}
-        >
-          {label}
-        </button>
-      );
+        <div className="text-center mb-12">
+          <h1 className="text-5xl font-black tracking-tight">
+            ChiDate
+          </h1>
+          <p className="text-gray-400 mt-3 text-sm uppercase tracking-widest">
+            Curated Chicago Date Experiences
+          </p>
+        </div>
 
-      return (
-        <div className="min-h-screen p-4 md:p-8">
-          <div className="max-w-xl mx-auto">
+        <div className="space-y-8">
 
-            <header className="text-center mb-8 relative">
-              <h1 className="text-4xl font-black text-[#B3282D] tracking-tight">
-                ChiDate
-              </h1>
-              <p className="text-gray-500 text-sm font-medium mt-1">
-                {t('subtitle')}
-              </p>
+          <div>
+            <p className="text-xs uppercase tracking-widest text-gray-500 mb-3">Date Type</p>
+            <div className="flex flex-wrap gap-3">
+              <Option value="adventurous" current={dateType} set={setDateType} label="Adventurous" />
+              <Option value="relaxing" current={dateType} set={setDateType} label="Relaxing" />
+              <Option value="cultural" current={dateType} set={setDateType} label="Cultural" />
+              <Option value="foodie" current={dateType} set={setDateType} label="Foodie" />
+            </div>
+          </div>
 
-              <button
-                onClick={() => setLang(lang === 'en' ? 'es' : 'en')}
-                className="absolute right-0 top-0 bg-white px-3 py-1 rounded-full shadow-sm text-xs font-bold border border-gray-100"
-              >
-                {lang.toUpperCase()}
-              </button>
-            </header>
+          <div>
+            <p className="text-xs uppercase tracking-widest text-gray-500 mb-3">Time</p>
+            <div className="flex gap-3">
+              <Option value="morning" current={timeOfDay} set={setTimeOfDay} label="Morning" />
+              <Option value="afternoon" current={timeOfDay} set={setTimeOfDay} label="Afternoon" />
+              <Option value="evening" current={timeOfDay} set={setTimeOfDay} label="Evening" />
+            </div>
+          </div>
 
-            <div className="bg-white rounded-3xl shadow-xl p-6 mb-8">
-              <div className="space-y-6">
+          <div>
+            <p className="text-xs uppercase tracking-widest text-gray-500 mb-3">Atmosphere</p>
+            <div className="flex gap-3">
+              <Option value="intimate" current={atmosphere} set={setAtmosphere} label="Intimate" />
+              <Option value="social" current={atmosphere} set={setAtmosphere} label="Social" />
+              <Option value="romantic" current={atmosphere} set={setAtmosphere} label="Romantic" />
+            </div>
+          </div>
 
-                <section>
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3 block">
-                    {t('label-date-type')}
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {['adventurous', 'relaxing', 'cultural', 'foodie'].map(type => (
-                      <OptionButton
-                        key={type}
-                        label={t(`type-${type}`)}
-                        active={dateType === type}
-                        onClick={() => setDateType(type)}
-                      />
-                    ))}
-                  </div>
-                </section>
+          <div>
+            <p className="text-xs uppercase tracking-widest text-gray-500 mb-3">Price</p>
+            <div className="flex gap-3">
+              <Option value="budget" current={price} set={setPrice} label="Budget" />
+              <Option value="mid" current={price} set={setPrice} label="Mid" />
+              <Option value="upscale" current={price} set={setPrice} label="Upscale" />
+            </div>
+          </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <section>
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3 block">
-                      {t('label-time-of-day')}
-                    </label>
-                    <div className="flex flex-col gap-2">
-                      {['morning', 'afternoon', 'evening'].map(time => (
-                        <OptionButton
-                          key={time}
-                          label={t(`time-${time}`)}
-                          active={timeOfDay === time}
-                          onClick={() => setTimeOfDay(time)}
-                        />
-                      ))}
-                    </div>
-                  </section>
+          <button
+            onClick={generateDate}
+            disabled={loading}
+            className={`w-full py-4 rounded-xl font-bold tracking-wide transition-all ${
+              loading
+                ? "bg-gray-800 text-gray-500"
+                : "bg-white text-black hover:bg-gray-200"
+            }`}
+          >
+            {loading ? "Curating..." : "Curate My Date"}
+          </button>
 
-                  <section>
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3 block">
-                      {t('label-atmosphere')}
-                    </label>
-                    <div className="flex flex-col gap-2">
-                      {['intimate', 'social', 'romantic'].map(atm => (
-                        <OptionButton
-                          key={atm}
-                          label={t(`atmosphere-${atm}`)}
-                          active={atmosphere === atm}
-                          onClick={() => setAtmosphere(atm)}
-                        />
-                      ))}
-                    </div>
-                  </section>
-                </div>
+        </div>
 
-                <button
-                  onClick={generateDate}
-                  disabled={loading}
-                  className={`w-full py-4 rounded-2xl font-bold text-lg transition-all ${
-                    loading
-                      ? 'bg-gray-100 text-gray-400'
-                      : 'bg-[#B3282D] text-white hover:bg-[#962024]'
-                  }`}
-                >
-                  {loading ? t('button-text-loading') : t('button-text-default')}
-                </button>
+        {error && (
+          <div className="mt-8 text-red-400 text-center">
+            {error}
+          </div>
+        )}
 
+        {result && (
+          <div className="mt-12 border border-gray-800 rounded-2xl p-8 bg-[#0E0E0E]">
+            <p className="text-xs uppercase tracking-widest text-gray-500 mb-2">
+              {result.Location}
+            </p>
+            <h2 className="text-3xl font-black mb-4">
+              {result.Title}
+            </h2>
+            <p className="text-gray-400 italic mb-6">
+              {result.Description}
+            </p>
+
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-gray-500 uppercase text-xs mb-1">Hours</p>
+                <p>{result.Hours}</p>
+              </div>
+              <div>
+                <p className="text-gray-500 uppercase text-xs mb-1">Best Time</p>
+                <p>{result.BestTime}</p>
               </div>
             </div>
 
-            {error && (
-              <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-center mb-8">
-                <p className="font-bold">{error}</p>
-              </div>
-            )}
-
-            {result && !loading && (
-              <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
-                <div className="bg-[#8EBAE5] p-6 text-white text-center">
-                  <span className="bg-white/20 px-3 py-1 rounded-full text-[10px] font-bold uppercase">
-                    {result.Location}
-                  </span>
-                  <h2 className="text-2xl font-black mt-3 uppercase">
-                    {result.Title}
-                  </h2>
-                </div>
-
-                <div className="p-6">
-                  <p className="text-gray-600 italic mb-6 text-center">
-                    "{result.Description}"
-                  </p>
-
-                  <div className="grid grid-cols-2 gap-4 text-xs">
-                    <div className="bg-gray-50 p-3 rounded-xl text-center">
-                      <div className="text-gray-400 font-bold uppercase mb-1">
-                        {t('result-hours')}
-                      </div>
-                      <div className="font-semibold">{result.Hours}</div>
-                    </div>
-
-                    <div className="bg-gray-50 p-3 rounded-xl text-center">
-                      <div className="text-gray-400 font-bold uppercase mb-1">
-                        {t('result-best-time')}
-                      </div>
-                      <div className="font-semibold">{result.BestTime}</div>
-                    </div>
-                  </div>
-
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                      result.MapQuery || result.Title + " Chicago"
-                    )}`}
-                    target="_blank"
-                    className="mt-6 block text-center py-4 bg-gray-100 rounded-2xl font-bold text-gray-700 hover:bg-gray-200"
-                  >
-                    📍 {t('map-link-text')}
-                  </a>
-                </div>
-              </div>
-            )}
-
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                result.MapQuery || result.Title + " Chicago"
+              )}`}
+              target="_blank"
+              className="block mt-8 text-center py-3 bg-white text-black rounded-xl font-bold hover:bg-gray-200 transition-all"
+            >
+              View on Map
+            </a>
           </div>
-        </div>
-      );
-    }
+        )}
 
-    const root = ReactDOM.createRoot(document.getElementById("root"));
-    root.render(<App />);
-  </script>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
 </body>
 </html>
